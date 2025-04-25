@@ -3,6 +3,9 @@ import re
 import requests
 import streamlit as st
 from requests.auth import HTTPBasicAuth
+from streamlit_browser_storage import LocalStorage
+
+storage = LocalStorage(key_prefix="jira_storage")
 
 def parse_estimate_to_minutes(value):
     try:
@@ -82,29 +85,32 @@ def summarize_issues_from_api(jira_url, jql, email, api_token):
     st.markdown(f"- 📅 근무일 기준 포맷: **{formatted}**")
 
 # Streamlit UI 시작
-st.title("🧾스토리별 할당 시간 요약 도구")
+st.title("🧾스토리별 할당 시간 요약 도구(작업대기)")
 
-if 'email' not in st.session_state:
-    st.session_state.email = ""
-if 'api_token' not in st.session_state:
-    st.session_state.api_token = ""
-if 'project' not in st.session_state:
-    st.session_state.project = ""
+email = storage.get("email", default="")
+api_token = storage.get("api_token", default="")
+project = storage.get("project", default="")
 
 with st.expander("🔐 설정 변경"):
-    st.session_state.email = st.text_input("Jira 이메일", value=st.session_state.email)
-    st.session_state.api_token = st.text_input("Jira API Token", value=st.session_state.api_token, type="password")
-    st.session_state.project = st.text_input("기본 프로젝트 키(예: AG)", value=st.session_state.project)
+    email = st.text_input("Jira 이메일", value=email, key="email_input")
+    api_token = st.text_input("Jira API Token", value=api_token, type="password", key="api_token_input")
+    project = st.text_input("기본 프로젝트 키(예: AG)", value=project, key="project_input")
+
+    if st.button("설정 저장"):
+        storage.set("email", email)
+        storage.set("api_token", api_token)
+        storage.set("project", project)
+        st.success("설정이 브라우저에 저장되었습니다.")
 
 fix_version = st.text_input("📦 Fix Version (예: APP 6.0.0)")
 authors_input = st.text_input("✍️ 작성자들을 쉼표로 입력 (예: 최영성, 여진석)")
 
 if st.button("Jira에서 데이터 가져오기"):
-    if not all([st.session_state.email, st.session_state.api_token, st.session_state.project, fix_version, authors_input]):
+    if not all([email, api_token, project, fix_version, authors_input]):
         st.error("모든 항목을 입력해 주세요.")
     else:
         jira_url = "https://acloset.atlassian.net"
         authors = [a.strip() for a in authors_input.split(',')]
         author_clause = " or ".join([f"reporter = {a}" for a in authors])
-        jql = f"project = {st.session_state.project} AND fixVersion = \"{fix_version}\" AND ({author_clause})"
-        summarize_issues_from_api(jira_url, jql, st.session_state.email, st.session_state.api_token)
+        jql = f"project = {project} AND fixVersion = \"{fix_version}\" AND ({author_clause})"
+        summarize_issues_from_api(jira_url, jql, email, api_token)
