@@ -86,7 +86,7 @@ def summarize_issues_from_api(jira_url, jql, email, api_token):
     summary = df.groupby("Parent summary")["Minutes"].sum().reset_index()
     summary["Minutes"] = summary["Minutes"].astype(int)
 
-    st.subheader("📊 Parent Summary별 Original Estimate (분)")
+    st.subheader("📊 스토리별 할당시간 (분)")
     st.dataframe(summary)
 
     total = summary["Minutes"].sum()
@@ -96,7 +96,7 @@ def summarize_issues_from_api(jira_url, jql, email, api_token):
     st.markdown(f"- 📅 근무일 기준 포맷: **{formatted}**")
 
 # Streamlit UI 시작
-st.title("🧾 Jira Original Estimate 요약 도구")
+st.title("🧾스토리별 할당 시간 요약 도구")
 
 config = load_config()
 email = config.get("email", "")
@@ -111,8 +111,8 @@ with st.expander("🔐 설정 변경"):
         save_config(email, api_token, project)
         st.success("설정이 저장되었습니다.")
 
-fix_version = st.text_input("📦 Fix Version (예: 2025.04.30)")
-authors_input = st.text_input("✍️ 작성자들을 쉼표로 입력 (예: yeoung004, user2)")
+fix_version = st.text_input("📦 Fix Version (예: APP 6.0.0)")
+authors_input = st.text_input("✍️ 작성자들을 쉼표로 입력 (예: 최영성, 여진석)")
 
 if st.button("Jira에서 데이터 가져오기"):
     if not all([email, api_token, project, fix_version, authors_input]):
@@ -123,4 +123,3 @@ if st.button("Jira에서 데이터 가져오기"):
         author_clause = " or ".join([f"reporter = {a}" for a in authors])
         jql = f"project = {project} AND fixVersion = \"{fix_version}\" AND ({author_clause})"
         summarize_issues_from_api(jira_url, jql, email, api_token)
-Ø
