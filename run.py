@@ -94,7 +94,7 @@ if 'project' not in st.session_state:
 with st.expander("🔐 설정 변경"):
     st.session_state.email = st.text_input("Jira 이메일", value=st.session_state.email)
     st.session_state.api_token = st.text_input("Jira API Token", value=st.session_state.api_token, type="password")
-    st.session_state.project = st.text_input("기본 프로젝트 키", value=st.session_state.project)
+    st.session_state.project = st.text_input("기본 프로젝트 키(예: AG)", value=st.session_state.project)
 
 fix_version = st.text_input("📦 Fix Version (예: APP 6.0.0)")
 authors_input = st.text_input("✍️ 작성자들을 쉼표로 입력 (예: 최영성, 여진석)")
