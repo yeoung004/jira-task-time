@@ -54,7 +54,6 @@ def fetch_issues_from_jira(jira_url, jql, email, api_token):
 
 def summarize_issues_from_api(jira_url, jql, email, api_token):
     issues = fetch_issues_from_jira(jira_url, jql, email, api_token)
-    print(issues)
     data = []
 
     for issue in issues:
