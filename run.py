@@ -99,6 +99,6 @@ if st.button("Jira에서 데이터 가져오기"):
     else:
         jira_url = "https://acloset.atlassian.net"
         authors = [a.strip() for a in authors_input.split(',')]
-        author_clause = " or ".join([f"reporter = {a}" for a in authors])
+        author_clause = " or ".join([f"assignee = {a}" for a in authors])
         jql = f"project = {project} AND fixVersion = \"{fix_version}\" AND ({author_clause})"
         summarize_issues_from_api(jira_url, jql, email, api_token)
