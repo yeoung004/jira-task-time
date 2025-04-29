@@ -60,7 +60,6 @@ def summarize_issues_from_api(jira_url, jql, email, api_token):
         summary = issue['fields']['summary']
         estimate = issue['fields'].get('timetracking', {}).get('originalEstimateSeconds', 0)
         minutes = int(estimate / 60) if estimate else 0
-        parent = issue['fields'].get('parent', {}).get('key')
         parent_summary = issue['fields'].get('parent', {}).get('fields', {}).get('summary', summary)
         data.append({"Parent summary": parent_summary, "Minutes": minutes})
 
