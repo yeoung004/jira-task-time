@@ -71,7 +71,7 @@ def summarize_issues_from_api(jira_url, jql, email, api_token):
     summary = df.groupby("Parent summary")["Minutes"].sum().reset_index()
     summary["Minutes"] = summary["Minutes"].astype(int)
 
-    st.subheader("📊 스토리별 할당시간 (분)")
+    st.subheader("📊 스토리별 할당시간 (분) 작업대기 only")
     st.dataframe(summary)
 
     total = summary["Minutes"].sum()
