@@ -71,7 +71,7 @@ def summarize_issues_from_api(jira_url, jql, email, api_token):
     summary = df.groupby("Parent summary")["Minutes"].sum().reset_index()
     summary["Minutes"] = summary["Minutes"].astype(int)
 
-    st.subheader("📊 스토리별 할당시간 (분) 작업대기 only")
+    st.subheader("📊 스토리별 할당시간 (분)")
     st.dataframe(summary)
 
     total = summary["Minutes"].sum()
@@ -87,7 +87,7 @@ with st.form("credentials_form"):
     email = st.text_input("Jira 이메일", value="", placeholder="you@example.com", key="email")
     api_token = st.text_input("Jira API Token", value="", placeholder="API Token", type="password", key="api_token")
     project = st.text_input("기본 프로젝트 키 (예: AG)", value="", placeholder="AG", key="project")
-    submit_settings = st.form_submit_button("설정 저장")
+    submit_settings = st.form_submit_button("불러오기")
 
 fix_version = st.text_input("📦 Fix Version (예: APP 6.0.0)")
 authors_input = st.text_input("✍️ 작성자들을 쉼표로 입력 (예: 최영성, 여진석)")
