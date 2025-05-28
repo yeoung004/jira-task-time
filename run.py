@@ -36,7 +36,7 @@ def fetch_issues_from_jira(jira_url, jql, email, api_token):
     auth = HTTPBasicAuth(email, api_token)
     params = {
         "jql": jql,
-        "fields": "summary,parent,timetracking"
+        "fields": "summary,parent,timetracking,assignee"
     }
 
     response = requests.get(
@@ -78,15 +78,29 @@ def summarize_issues_from_api(jira_url, jql, email, api_token):
     formatted = minutes_to_dhm(total)
     st.markdown(f"### 🧮 총합: {total}분  ")
     st.markdown(f"- 약 {total // 60}시간 {total % 60}분")
-    st.markdown(f"- 📅 근무일 기준 포맷: **{formatted}**")
+    st.markdown(f"- 📅 근무일 기준 포맷: ***{formatted}***")
 
-    # 작성자 인원수로 시간 나누기
+    # 사람별로 각각 할당 시간 계산 (assignee를 사람이름으로 필터링)
     authors = [a.strip() for a in st.session_state.authors_input.split(',') if a.strip()]
-    num_authors = len(authors)
-    if num_authors > 0:
-        per_person = total // num_authors
-        per_person_fmt = minutes_to_dhm(per_person)
-        st.markdown(f"- 총 {num_authors}명 👤 1인당 할당 시간: {per_person}분 (근무일 기준: {per_person_fmt})")
+    if authors:
+        st.markdown("---")
+        st.markdown("#### 👤 사람별 할당 시간")
+        person_minutes = {author: 0 for author in authors}
+        for issue in issues:
+            assignee = issue['fields'].get('assignee', None)
+            if assignee:
+                assignee_name = assignee.get('displayName') or assignee.get('name') or assignee.get('emailAddress') or ''
+                assignee_name = assignee_name.strip()
+                estimate = issue['fields'].get('timetracking', {}).get('originalEstimateSeconds', 0)
+                minutes = int(estimate / 60) if estimate else 0
+                for author in authors:
+                    # assignee_name이 정확히 author와 일치할 때만 할당
+                    if author == assignee_name:
+                        person_minutes[author] += minutes
+        for author in authors:
+            m = person_minutes[author]
+            m_fmt = minutes_to_dhm(m)
+            st.markdown(f"- {author}: {m}분 (근무일 기준: {m_fmt})")
 
 def update_email():
     st.session_state.email = st.session_state.email_input
