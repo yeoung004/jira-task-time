@@ -36,7 +36,7 @@ def fetch_issues_from_jira(jira_url, jql, email, api_token):
     auth = HTTPBasicAuth(email, api_token)
     params = {
         "jql": jql,
-        "fields": "summary,parent,timetracking,assignee"
+        "fields": "summary,parent,timetracking,assignee,status"
     }
 
     response = requests.get(
@@ -71,36 +71,62 @@ def summarize_issues_from_api(jira_url, jql, email, api_token):
     summary = df.groupby("Parent summary")["Minutes"].sum().reset_index()
     summary["Minutes"] = summary["Minutes"].astype(int)
 
-    st.subheader("📊 스토리별 할당시간 (분)")
-    st.dataframe(summary)
+    with st.expander("📊 스토리별 할당시간 (분)", expanded=True):
+        st.dataframe(summary)
 
     total = summary["Minutes"].sum()
     formatted = minutes_to_dhm(total)
-    st.markdown(f"### 🧮 총합: {total}분  ")
-    st.markdown(f"- 약 {total // 60}시간 {total % 60}분")
-    st.markdown(f"- 📅 근무일 기준 포맷: ***{formatted}***")
+    with st.expander("🧮 총합 및 근무일 기준 포맷", expanded=True):
+        st.markdown(f"### 🧮 총합: {total}분  ")
+        st.markdown(f"- 약 {total // 60}시간 {total % 60}분")
+        st.markdown(f"- 📅 근무일 기준 포맷: ***{formatted}***")
 
     # 사람별로 각각 할당 시간 계산 (assignee를 사람이름으로 필터링)
     authors = [a.strip() for a in st.session_state.authors_input.split(',') if a.strip()]
     if authors:
-        st.markdown("---")
-        st.markdown("#### 👤 사람별 할당 시간")
-        person_minutes = {author: 0 for author in authors}
-        for issue in issues:
-            assignee = issue['fields'].get('assignee', None)
-            if assignee:
-                assignee_name = assignee.get('displayName') or assignee.get('name') or assignee.get('emailAddress') or ''
-                assignee_name = assignee_name.strip()
-                estimate = issue['fields'].get('timetracking', {}).get('originalEstimateSeconds', 0)
-                minutes = int(estimate / 60) if estimate else 0
-                for author in authors:
-                    # assignee_name이 정확히 author와 일치할 때만 할당
-                    if author == assignee_name:
-                        person_minutes[author] += minutes
-        for author in authors:
-            m = person_minutes[author]
-            m_fmt = minutes_to_dhm(m)
-            st.markdown(f"- {author}: {m}분 (근무일 기준: {m_fmt})")
+        with st.expander("👤 사람별 할당 시간", expanded=True):
+            person_minutes = {author: 0 for author in authors}
+            for issue in issues:
+                assignee = issue['fields'].get('assignee', None)
+                if assignee:
+                    assignee_name = assignee.get('displayName') or assignee.get('name') or assignee.get('emailAddress') or ''
+                    assignee_name = assignee_name.strip()
+                    estimate = issue['fields'].get('timetracking', {}).get('originalEstimateSeconds', 0)
+                    minutes = int(estimate / 60) if estimate else 0
+                    for author in authors:
+                        # assignee_name이 정확히 author와 일치할 때만 할당
+                        if author == assignee_name:
+                            person_minutes[author] += minutes
+            for author in authors:
+                m = person_minutes[author]
+                m_fmt = minutes_to_dhm(m)
+                st.markdown(f"- {author}: {m}분 (근무일 기준: {m_fmt})")
+
+    # 작업대기/작업중 상태만 사람별로 집계
+    authors = [a.strip() for a in st.session_state.authors_input.split(',') if a.strip()]
+    waiting_statuses = ['To Do', '대기', '작업 대기', 'In Progress', '진행중', '진행 중', '작업 중']
+    if authors:
+        with st.expander("👤 작업대기/작업중 상태 사람별 할당 시간", expanded=False):
+            person_minutes = {author: 0 for author in authors}
+            for issue in issues:
+                # 상태명: 이슈 status → parent status
+                status_name = issue['fields'].get('status', {}).get('name', '').strip()
+                if not status_name and 'parent' in issue['fields']:
+                    status_name = issue['fields']['parent'].get('fields', {}).get('status', {}).get('name', '').strip()
+                if status_name in waiting_statuses:
+                    assignee = issue['fields'].get('assignee', None)
+                    if assignee:
+                        assignee_name = assignee.get('displayName') or assignee.get('name') or assignee.get('emailAddress') or ''
+                        assignee_name = assignee_name.strip()
+                        estimate = issue['fields'].get('timetracking', {}).get('originalEstimateSeconds', 0)
+                        minutes = int(estimate / 60) if estimate else 0
+                        for author in authors:
+                            if author == assignee_name:
+                                person_minutes[author] += minutes
+            for author in authors:
+                m = person_minutes[author]
+                m_fmt = minutes_to_dhm(m)
+                st.markdown(f"- {author}: {m}분 (근무일 기준: {m_fmt})")
 
 def update_email():
     st.session_state.email = st.session_state.email_input
