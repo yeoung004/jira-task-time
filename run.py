@@ -83,11 +83,27 @@ def summarize_issues_from_api(jira_url, jql, email, api_token):
 # Streamlit UI 시작
 st.title("🧾스토리별 할당 시간 요약 도구")
 
-with st.form("credentials_form"):
-    email = st.text_input("Jira 이메일", value="", placeholder="you@example.com", key="email")
-    api_token = st.text_input("Jira API Token", value="", placeholder="API Token", type="password", key="api_token")
-    project = st.text_input("기본 프로젝트 키 (예: AG)", value="", placeholder="AG", key="project")
-    submit_settings = st.form_submit_button("불러오기")
+# 기본 변수 값 설정
+if 'email' not in st.session_state:
+    st.session_state.email = ""
+if 'api_token' not in st.session_state:
+    st.session_state.api_token = ""
+if 'project' not in st.session_state:
+    st.session_state.project = ""
+
+# 폼 입력 필드 생성
+email = st.text_input("Jira 이메일", value=st.session_state.email, placeholder="you@example.com", key="email_input")
+api_token = st.text_input("Jira API Token", value=st.session_state.api_token, placeholder="API Token", type="password", key="api_token_input")
+project = st.text_input("기본 프로젝트 키 (예: AG)", value=st.session_state.project, placeholder="AG", key="project_input")
+
+# 입력값 저장 (폼 없이도 자동으로 변수에 저장됨)
+st.session_state.email = email
+st.session_state.api_token = api_token
+st.session_state.project = project
+
+# "불러오기" 버튼은 옵션으로 유지
+if st.button("불러오기", key="load_button"):
+    st.success("설정이 불러와졌습니다.")
 
 fix_version = st.text_input("📦 Fix Version (예: APP 6.0.0)")
 authors_input = st.text_input("✍️ 작성자들을 쉼표로 입력 (예: 최영성, 여진석)")
