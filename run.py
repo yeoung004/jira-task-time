@@ -80,6 +80,29 @@ def summarize_issues_from_api(jira_url, jql, email, api_token):
     st.markdown(f"- 약 {total // 60}시간 {total % 60}분")
     st.markdown(f"- 📅 근무일 기준 포맷: **{formatted}**")
 
+    # 작성자 인원수로 시간 나누기
+    authors = [a.strip() for a in st.session_state.authors_input.split(',') if a.strip()]
+    num_authors = len(authors)
+    if num_authors > 0:
+        per_person = total // num_authors
+        per_person_fmt = minutes_to_dhm(per_person)
+        st.markdown(f"- 총 {num_authors}명 👤 1인당 할당 시간: {per_person}분 (근무일 기준: {per_person_fmt})")
+
+def update_email():
+    st.session_state.email = st.session_state.email_input
+
+def update_api_token():
+    st.session_state.api_token = st.session_state.api_token_input
+
+def update_project():
+    st.session_state.project = st.session_state.project_input
+
+def update_fix_version():
+    st.session_state.fix_version = st.session_state.fix_version_input
+
+def update_authors_input():
+    st.session_state.authors_input = st.session_state.authors_input_key
+
 # Streamlit UI 시작
 st.title("🧾스토리별 할당 시간 요약 도구")
 
@@ -90,30 +113,47 @@ if 'api_token' not in st.session_state:
     st.session_state.api_token = ""
 if 'project' not in st.session_state:
     st.session_state.project = ""
+if 'fix_version' not in st.session_state:
+    st.session_state.fix_version = ""
+if 'authors_input' not in st.session_state:
+    st.session_state.authors_input = ""
 
-# 폼 입력 필드 생성
-email = st.text_input("Jira 이메일", value=st.session_state.email, placeholder="you@example.com", key="email_input")
-api_token = st.text_input("Jira API Token", value=st.session_state.api_token, placeholder="API Token", type="password", key="api_token_input")
-project = st.text_input("기본 프로젝트 키 (예: AG)", value=st.session_state.project, placeholder="AG", key="project_input")
+# 사이드바에 설정 입력 필드 생성
+with st.sidebar:
+    st.header("🔑 Jira 계정 설정")
+    with st.form("jira_form"):
+        email = st.text_input("Jira 이메일", value=st.session_state.email, placeholder="you@example.com")
+        api_token = st.text_input("Jira API Token", value=st.session_state.api_token, placeholder="API Token", type="password")
+        project = st.text_input("기본 프로젝트 키 (예: AG)", value=st.session_state.project, placeholder="AG")
+        fix_version = st.text_input("📦 Fix Version (예: APP 6.0.0)", value=st.session_state.fix_version)
+        authors_input = st.text_input("✍️ 작성자들을 쉼표로 입력 (예: 최영성, 여진석)", value=st.session_state.authors_input)
+        submitted = st.form_submit_button("입력값 저장")
+        if submitted:
+            st.session_state.email = email
+            st.session_state.api_token = api_token
+            st.session_state.project = project
+            st.session_state.fix_version = fix_version
+            st.session_state.authors_input = authors_input
 
-# 입력값 저장 (폼 없이도 자동으로 변수에 저장됨)
-st.session_state.email = email
-st.session_state.api_token = api_token
-st.session_state.project = project
+# 모든 입력값 자동 저장
+st.session_state.fix_version = fix_version
+st.session_state.authors_input = authors_input
 
-# "불러오기" 버튼은 옵션으로 유지
-if st.button("불러오기", key="load_button"):
-    st.success("설정이 불러와졌습니다.")
+# 입력값이 모두 채워졌는지 실시간 체크
+all_filled = all([
+    st.session_state.email,
+    st.session_state.api_token,
+    st.session_state.project,
+    st.session_state.fix_version,
+    st.session_state.authors_input
+])
 
-fix_version = st.text_input("📦 Fix Version (예: APP 6.0.0)")
-authors_input = st.text_input("✍️ 작성자들을 쉼표로 입력 (예: 최영성, 여진석)")
-
-if st.button("Jira에서 데이터 가져오기"):
-    if not all([email, api_token, project, fix_version, authors_input]):
-        st.error("모든 항목을 입력해 주세요.")
-    else:
+if not all_filled:
+    st.warning("모든 항목을 입력해 주세요. (자동완성 사용 시 입력란을 한 번 클릭하거나 엔터를 눌러주세요)")
+else:
+    if st.button("Jira에서 데이터 가져오기"):
         jira_url = "https://acloset.atlassian.net"
-        authors = [a.strip() for a in authors_input.split(',')]
+        authors = [a.strip() for a in st.session_state.authors_input.split(',')]
         author_clause = " or ".join([f"assignee = {a}" for a in authors])
-        jql = f"project = {project} AND fixVersion = \"{fix_version}\" AND ({author_clause})"
-        summarize_issues_from_api(jira_url, jql, email, api_token)
+        jql = f"project = {st.session_state.project} AND fixVersion = \"{st.session_state.fix_version}\" AND ({author_clause})"
+        summarize_issues_from_api(jira_url, jql, st.session_state.email, st.session_state.api_token)
